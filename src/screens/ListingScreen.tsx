@@ -19,9 +19,10 @@ interface ListingScreenProps {
   chats: Chat[];
   setChats: React.Dispatch<React.SetStateAction<Chat[]>>;
   navigation: Navigation;
+  isFocused: boolean;
 }
 
-type FilterType = 'ALL' | 'AI' | 'TEAM' | 'UNREAD';
+type FilterType = 'ALL' | 'UNREAD';
 
 // Helper to format ISO date strings beautifully
 const formatMessageTime = (dateString?: string): string => {
@@ -71,9 +72,10 @@ const getAvatarColor = (name: string): string => {
   return colors[index];
 };
 
-export default function ListingScreen({ chats, setChats, navigation }: ListingScreenProps) {
+export default function ListingScreen({ chats, setChats, navigation, isFocused }: ListingScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('ALL');
+  const [isLoading, setIsLoading] = useState(true);
   const listFlatListRef = useRef<FlatList>(null);
 
   // Filtering list data based on state
@@ -81,11 +83,7 @@ export default function ListingScreen({ chats, setChats, navigation }: ListingSc
     let result = chats;
 
     // Filter by type
-    if (selectedFilter === 'AI') {
-      result = chats.filter(c => c.id === '1');
-    } else if (selectedFilter === 'TEAM') {
-      result = chats.filter(c => c.id !== '1');
-    } else if (selectedFilter === 'UNREAD') {
+    if (selectedFilter === 'UNREAD') {
       result = chats.filter(c => c.unreadCount > 0);
     }
 
@@ -102,43 +100,51 @@ export default function ListingScreen({ chats, setChats, navigation }: ListingSc
   };
 
   useEffect(() => {
-    api.getAllUsersApi()
-      .then((res: any) => {
-        if (res && res.success && Array.isArray(res.data)) {
-          const apiChats: Chat[] = res.data.map((user: any) => {
-            const lastMsg = user.last_message || (user.messages && user.messages.length > 0 ? user.messages[0] : null);
-            const formattedMessages = (user.messages || []).map((msg: any) => ({
-              id: msg.message_id || msg._id || String(Math.random()),
-              text: msg.body || '',
-              timestamp: formatMessageTime(msg.timestamp),
-              isUser: msg.direction === 'outbound',
-              status: msg.status === 'received' ? 'delivered' : msg.status,
-            }));
+    if (!isFocused) return;
 
-            return {
-              id: user.user_id,
-              name: user.name || user.phone,
-              avatar: user.profile_picture || '',
-              role: user.phone || 'WhatsApp Contact',
-              lastMessage: lastMsg ? lastMsg.body : 'No messages yet',
-              time: lastMsg ? formatMessageTime(lastMsg.timestamp) : '',
-              unreadCount: user.unread_count || 0,
-              online: user.is_active || false,
-              messages: formattedMessages,
-            };
-          });
+    const fetchUsers = () => {
+      api.getAllUsersApi()
+        .then((res: any) => {
+          if (res && res.success && Array.isArray(res.data)) {
+            const apiChats: Chat[] = res.data.map((user: any) => {
+              const lastMsg = user.last_message || (user.messages && user.messages.length > 0 ? user.messages[user.messages.length - 1] : null);
+              const formattedMessages = (user.messages || []).map((msg: any) => ({
+                id: msg.message_id || msg._id || String(Math.random()),
+                text: msg.body || '',
+                timestamp: formatMessageTime(msg.timestamp),
+                isUser: msg.direction === 'outbound',
+                status: msg.status === 'received' ? 'delivered' : msg.status,
+              }));
 
-          // Merge loaded users with our custom HelpBot AI assistant (always preserve system bot)
-          setChats(prevChats => {
-            const aiChat = prevChats.find(c => c.id === '1');
-            return aiChat ? [...apiChats] : apiChats;
-          });
-        }
-      })
-      .catch((error: any) => {
-        console.error("❌ Error fetching users from API:", error);
-      });
-  }, []);
+              return {
+                id: user.user_id,
+                name: user.name || user.phone,
+                avatar: user.profile_picture || '',
+                role: user.phone || 'WhatsApp Contact',
+                lastMessage: lastMsg ? lastMsg.body : 'No messages yet',
+                time: lastMsg ? formatMessageTime(lastMsg.timestamp) : '',
+                unreadCount: user.unread_count || 0,
+                online: user.is_active || false,
+                messages: formattedMessages,
+              };
+            });
+
+            setChats(apiChats);
+          }
+        })
+        .catch((error: any) => {
+          console.error("❌ Error fetching users from API:", error);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    };
+
+    fetchUsers();
+    const intervalId = setInterval(fetchUsers, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [isFocused]);
 
   return (
     <View style={styles.innerContainer}>
@@ -152,7 +158,7 @@ export default function ListingScreen({ chats, setChats, navigation }: ListingSc
             <Text style={styles.appNameText}>HelpBot</Text>
             <View style={styles.statusServerRow}>
               <View style={styles.onlinePulsePoint} />
-              <Text style={styles.serverStatusText}>API GATEWAY OPERATIONAL</Text>
+              <Text style={styles.serverStatusText}>CONNECT WITH YOUR CLIENTS</Text>
             </View>
           </View>
         </View>
@@ -183,8 +189,6 @@ export default function ListingScreen({ chats, setChats, navigation }: ListingSc
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
           {[
             { id: 'ALL', label: 'All Chats' },
-            { id: 'AI', label: 'AI Support' },
-            { id: 'TEAM', label: 'Team Dev' },
             { id: 'UNREAD', label: 'Unread' },
           ].map(tab => {
             const active = selectedFilter === tab.id;
@@ -205,8 +209,25 @@ export default function ListingScreen({ chats, setChats, navigation }: ListingSc
       </View>
 
       {/* Chat Cards FlatList */}
-      <FlatList
-        ref={listFlatListRef}
+      {isLoading && chats.length === 0 ? (
+        <View style={styles.listContainer}>
+          {[1, 2, 3, 4, 5].map(key => (
+            <View key={key} style={styles.chatCard}>
+              <View style={[styles.avatarPlaceholder, { backgroundColor: '#1E2538' }]} />
+              <View style={styles.cardCenterBlock}>
+                <View style={styles.nameRow}>
+                  <View style={{ width: 120, height: 16, backgroundColor: '#1E2538', borderRadius: 4 }} />
+                  <View style={{ width: 40, height: 12, backgroundColor: '#1E2538', borderRadius: 4 }} />
+                </View>
+                <View style={{ width: 80, height: 12, backgroundColor: '#1E2538', borderRadius: 4, marginTop: 6, marginBottom: 8 }} />
+                <View style={{ width: '80%', height: 14, backgroundColor: '#1E2538', borderRadius: 4 }} />
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          ref={listFlatListRef}
         data={getFilteredChats()}
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
@@ -214,7 +235,7 @@ export default function ListingScreen({ chats, setChats, navigation }: ListingSc
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>💬</Text>
-            <Text style={styles.emptyTitleText}>No active conversations</Text>
+            <Text style={styles.emptyTitleText}>No {selectedFilter === "UNREAD" ? "unread" : "active"} conversations</Text>
             <Text style={styles.emptySubText}>Try adjusting your search queries or tabs.</Text>
           </View>
         }
@@ -237,7 +258,7 @@ export default function ListingScreen({ chats, setChats, navigation }: ListingSc
                     </Text>
                   </View>
                 )}
-                {item.online && <View style={styles.onlineDotOverlay} />}
+                {/* {item.online && <View style={styles.onlineDotOverlay} />} */}
               </View>
 
               {/* Core Text Section */}
@@ -267,6 +288,7 @@ export default function ListingScreen({ chats, setChats, navigation }: ListingSc
           );
         }}
       />
+      )}
     </View>
   );
 }

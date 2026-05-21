@@ -37,6 +37,19 @@ const formatMessageTime = (dateString?: string): string => {
   }
 };
 
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    '#4F46E5', '#0EA5E9', '#10B981', '#F59E0B',
+    '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
 interface ChatroomScreenProps {
   chatId: string;
   chats: Chat[];
@@ -69,25 +82,32 @@ export default function ChatroomScreen({
   // Load API messages and mark as read when chat opens
   useEffect(() => {
     if (chatId !== '1') {
-      // Mark as read
-      api.markMessagesReadApi(chatId).then(() => {
-        setChats(prev => prev.map(c => c.id === chatId ? { ...c, unreadCount: 0 } : c));
-      }).catch(err => console.error("Error marking read", err));
+      const fetchAndMarkRead = () => {
+        // Mark as read
+        api.markMessagesReadApi(chatId).then(() => {
+          setChats(prev => prev.map(c => c.id === chatId ? { ...c, unreadCount: 0 } : c));
+        }).catch(err => console.error("Error marking read", err));
 
-      // Fetch full messages
-      api.getUserMessagesApi(chatId).then((res: any) => {
-        if (res && res.success && Array.isArray(res.data)) {
-          const formattedMsgs: Message[] = res.data.map((msg: any) => ({
-            id: msg.message_id || msg._id || String(Math.random()),
-            text: msg.body || '',
-            timestamp: formatMessageTime(msg.timestamp),
-            isUser: msg.direction === 'outbound',
-            status: msg.status === 'received' ? 'delivered' : msg.status,
-          }));
+        // Fetch full messages
+        api.getUserMessagesApi(chatId).then((res: any) => {
+          if (res && res.success && Array.isArray(res.data)) {
+            const formattedMsgs: Message[] = res.data.map((msg: any) => ({
+              id: msg.message_id || msg._id || String(Math.random()),
+              text: msg.body || '',
+              timestamp: formatMessageTime(msg.timestamp),
+              isUser: msg.direction === 'outbound',
+              status: msg.status === 'received' ? 'delivered' : msg.status,
+            }));
 
-          setChats(prev => prev.map(c => c.id === chatId ? { ...c, messages: formattedMsgs } : c));
-        }
-      }).catch(err => console.error("Error fetching messages", err));
+            setChats(prev => prev.map(c => c.id === chatId ? { ...c, messages: formattedMsgs } : c));
+          }
+        }).catch(err => console.error("Error fetching messages", err));
+      };
+
+      fetchAndMarkRead();
+      const intervalId = setInterval(fetchAndMarkRead, 7000);
+
+      return () => clearInterval(intervalId);
     }
   }, [chatId]);
 
@@ -267,7 +287,15 @@ export default function ChatroomScreen({
             <BackIcon />
           </TouchableOpacity>
 
-          <Image source={{ uri: currentActiveChat.avatar }} style={styles.roomHeaderAvatar} />
+          {currentActiveChat.avatar ? (
+            <Image source={{ uri: currentActiveChat.avatar }} style={styles.roomHeaderAvatar} />
+          ) : (
+            <View style={[styles.roomHeaderAvatarPlaceholder, { backgroundColor: getAvatarColor(currentActiveChat.name) }]}>
+              <Text style={styles.roomHeaderAvatarPlaceholderText}>
+                {(currentActiveChat.name || '?').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
 
           <View style={styles.roomTitleBlock}>
             <Text style={styles.roomHeaderName}>{currentActiveChat.name}</Text>
@@ -342,9 +370,9 @@ export default function ChatroomScreen({
         {/* Chat Room Input Toolbar */}
         <View style={styles.inputToolbar}>
           <View style={styles.inputRoundedBackground}>
-            <TouchableOpacity style={styles.toolbarAddBtn} activeOpacity={0.7}>
+            {/* <TouchableOpacity style={styles.toolbarAddBtn} activeOpacity={0.7}>
               <Text style={styles.plusEmoji}>＋</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TextInput
               placeholder={`Message ${currentActiveChat.name.split(' ')[0]}...`}
@@ -355,9 +383,9 @@ export default function ChatroomScreen({
               onChangeText={setInputText}
             />
 
-            <TouchableOpacity style={styles.emojiPickerBtn} activeOpacity={0.7}>
+            {/* <TouchableOpacity style={styles.emojiPickerBtn} activeOpacity={0.7}>
               <Text style={styles.smileEmoji}>😊</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           <TouchableOpacity
@@ -410,6 +438,18 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     backgroundColor: '#151B2C',
+  },
+  roomHeaderAvatarPlaceholder: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  roomHeaderAvatarPlaceholderText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
   },
   roomTitleBlock: {
     flex: 1,

@@ -7,22 +7,13 @@ import User from '../models/User.js';
 export async function getAllUsers(req, res) {
   try {
     const users = await User.find()
-      .slice('messages', -1) // Fetch only the last message from the messages array
       .sort({ last_message_at: -1 })
       .lean();
 
-    // Add a last_message property to the returned user objects for easier frontend consumption
-    const formattedUsers = users.map(user => {
-      const lastMsg = user.messages && user.messages.length > 0 ? user.messages[0] : null;
-      return {
-        ...user,
-      };
-    });
-
     res.status(200).json({
       success: true,
-      count: formattedUsers.length,
-      data: formattedUsers,
+      count: users.length,
+      data: users,
     });
   } catch (error) {
     console.error('❌ Error fetching users:', error.message);

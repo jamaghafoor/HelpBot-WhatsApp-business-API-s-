@@ -73,7 +73,7 @@ export default function SimpleNavigator({ chats, setChats }: SimpleNavigatorProp
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* 1. Base Listing Screen (always loaded for fast stack response) */}
-      <ListingScreen chats={chats} setChats={setChats} navigation={navigation} />
+      <ListingScreen chats={chats} setChats={setChats} navigation={navigation} isFocused={!activeChatId} />
 
       {/* 2. Floating Animated Chatroom Screen */}
       {renderedChatId && (

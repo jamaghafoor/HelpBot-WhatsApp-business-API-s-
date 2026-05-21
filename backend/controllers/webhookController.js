@@ -21,8 +21,6 @@ function generateUserId(phone) {
  */
 export async function handleIncomingMessage(req, res) {
 
-  console.log("Incoming message", req.body);
-
   try {
     const {
       From,
