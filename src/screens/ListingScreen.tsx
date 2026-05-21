@@ -14,6 +14,8 @@ import { Chat } from '../types';
 import { ChatbotIcon, SearchIcon } from '../components/Icons';
 import { Navigation } from '../navigation/SimpleNavigator';
 import api from "../api";
+import { createMMKV } from 'react-native-mmkv';
+const MMKV = createMMKV();
 
 interface ListingScreenProps {
   chats: Chat[];
@@ -100,6 +102,18 @@ export default function ListingScreen({ chats, setChats, navigation, isFocused }
   };
 
   useEffect(() => {
+    const cachedData = MMKV.getString('offline_chats');
+    if (cachedData && chats.length === 0) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        setChats(parsed);
+      } catch (e) {
+        console.error("Failed to parse cached chats", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (!isFocused) return;
 
     const fetchUsers = () => {
@@ -130,6 +144,7 @@ export default function ListingScreen({ chats, setChats, navigation, isFocused }
             });
 
             setChats(apiChats);
+            MMKV.set('offline_chats', JSON.stringify(apiChats));
           }
         })
         .catch((error: any) => {
@@ -228,66 +243,66 @@ export default function ListingScreen({ chats, setChats, navigation, isFocused }
       ) : (
         <FlatList
           ref={listFlatListRef}
-        data={getFilteredChats()}
-        keyExtractor={item => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>💬</Text>
-            <Text style={styles.emptyTitleText}>No {selectedFilter === "UNREAD" ? "unread" : "active"} conversations</Text>
-            <Text style={styles.emptySubText}>Try adjusting your search queries or tabs.</Text>
-          </View>
-        }
-        renderItem={({ item }) => {
-          const hasUnread = item.unreadCount > 0;
-          return (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Chatroom', { chatId: item.id })}
-              style={styles.chatCard}
-              activeOpacity={0.7}
-            >
-              {/* Avatar Container */}
-              <View style={styles.avatarFrame}>
-                {item.avatar ? (
-                  <Image source={{ uri: item.avatar }} style={styles.avatarImage} />
-                ) : (
-                  <View style={[styles.avatarPlaceholder, { backgroundColor: getAvatarColor(item.name) }]}>
-                    <Text style={styles.avatarPlaceholderText}>
-                      {(item.name || '?').charAt(0).toUpperCase()}
-                    </Text>
+          data={getFilteredChats()}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>💬</Text>
+              <Text style={styles.emptyTitleText}>No {selectedFilter === "UNREAD" ? "unread" : "active"} conversations</Text>
+              <Text style={styles.emptySubText}>Try adjusting your search queries or tabs.</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const hasUnread = item.unreadCount > 0;
+            return (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Chatroom', { chatId: item.id })}
+                style={styles.chatCard}
+                activeOpacity={0.7}
+              >
+                {/* Avatar Container */}
+                <View style={styles.avatarFrame}>
+                  {item.avatar ? (
+                    <Image source={{ uri: item.avatar }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={[styles.avatarPlaceholder, { backgroundColor: getAvatarColor(item.name) }]}>
+                      <Text style={styles.avatarPlaceholderText}>
+                        {(item.name || '?').charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  {/* {item.online && <View style={styles.onlineDotOverlay} />} */}
+                </View>
+
+                {/* Core Text Section */}
+                <View style={styles.cardCenterBlock}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.cardContactName}>{item.name}</Text>
+                    <Text style={styles.cardTimeText}>{item.time}</Text>
+                  </View>
+                  <Text style={styles.cardContactRole}>{item.role}</Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.cardSnippetText, hasUnread && styles.cardSnippetTextUnread]}
+                  >
+                    {item.lastMessage}
+                  </Text>
+                </View>
+
+                {/* Badge Column */}
+                {hasUnread && (
+                  <View style={styles.unreadBadgeWrapper}>
+                    <View style={styles.unreadGradientBadge}>
+                      <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
+                    </View>
                   </View>
                 )}
-                {/* {item.online && <View style={styles.onlineDotOverlay} />} */}
-              </View>
-
-              {/* Core Text Section */}
-              <View style={styles.cardCenterBlock}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.cardContactName}>{item.name}</Text>
-                  <Text style={styles.cardTimeText}>{item.time}</Text>
-                </View>
-                <Text style={styles.cardContactRole}>{item.role}</Text>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.cardSnippetText, hasUnread && styles.cardSnippetTextUnread]}
-                >
-                  {item.lastMessage}
-                </Text>
-              </View>
-
-              {/* Badge Column */}
-              {hasUnread && (
-                <View style={styles.unreadBadgeWrapper}>
-                  <View style={styles.unreadGradientBadge}>
-                    <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
-                  </View>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        }}
-      />
+              </TouchableOpacity>
+            );
+          }}
+        />
       )}
     </View>
   );

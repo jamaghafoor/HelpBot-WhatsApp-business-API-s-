@@ -154,70 +154,6 @@ export default function ChatroomScreen({
     return null;
   }
 
-  // Simulation response logic
-  const triggerAutoReply = (targetChatId: string, userMsgText: string) => {
-    const activeChat = chats.find(c => c.id === targetChatId);
-    if (!activeChat) return;
-
-    let responseText = '';
-    const lowerText = userMsgText.toLowerCase();
-
-    if (activeChat.id === '1') {
-      // HelpBot AI replies
-      if (lowerText.includes('api') || lowerText.includes('key') || lowerText.includes('token')) {
-        responseText = 'Your WhatsApp Business API Client is authenticated. Navigate to "Credentials Console" to generate secondary access keys! 🔑';
-      } else if (lowerText.includes('status') || lowerText.includes('operational') || lowerText.includes('health')) {
-        responseText = 'Service Status: GREEN 🟢\nLatency: 124ms\nSuccess rate: 99.98%\nEverything is running perfectly!';
-      } else if (lowerText.includes('webhook') || lowerText.includes('url')) {
-        responseText = 'Your active Webhook URL is `https://api.helpbot.io/v1/webhook`. The gateway verified all test handshakes! 🔗';
-      } else if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
-        responseText = 'Hello! I am HelpBot support intelligence. Tell me if you need help with APIs, Webhooks, or Server Latency status! 🤖';
-      } else {
-        responseText = 'Understood! I have registered your webhook inquiry. Meta server endpoints are working smoothly. Let me know what else I can fetch! 💬';
-      }
-    } else {
-      // Team members
-      if (activeChat.id === '2') {
-        responseText = `Oh! That sounds awesome. I'll merge these layout edits. Let me know if we need the dashboard to match this aesthetic! 🎨`;
-      } else if (activeChat.id === '3') {
-        responseText = `Acknowledged. I'll test the headers on our sandbox container first to ensure webhook validation passes. 💻`;
-      } else if (activeChat.id === '4') {
-        responseText = `Perfect! That will be standard procedure for our Meta demo deck. Let's touch base later today! 📈`;
-      } else {
-        responseText = `Got it. Just starting the benchmark simulation now. Latency remains steady under high pressure load! 🚀`;
-      }
-    }
-
-    setTimeout(() => {
-      setIsTypingState(true);
-    }, 700);
-
-    setTimeout(() => {
-      setIsTypingState(false);
-
-      const newReply: Message = {
-        id: `${targetChatId}_reply_${Date.now()}`,
-        text: responseText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isUser: false,
-      };
-
-      setChats(prevChats =>
-        prevChats.map(c => {
-          if (c.id === targetChatId) {
-            return {
-              ...c,
-              lastMessage: responseText.replace(/\n/g, ' '),
-              time: 'Just now',
-              messages: [...c.messages, newReply],
-            };
-          }
-          return c;
-        })
-      );
-    }, 2400);
-  };
-
   const handleSendMessage = () => {
     if (!inputText.trim()) return;
 
@@ -246,26 +182,23 @@ export default function ChatroomScreen({
       })
     );
 
-    if (chatId === '1') {
-      triggerAutoReply(chatId, messageText);
-    } else {
-      const phone = currentActiveChat?.role || '';
-      api.sendMessageApi(phone, messageText).then((res: any) => {
-        if (res && res.success) {
-          setChats(prevChats =>
-            prevChats.map(c => {
-              if (c.id === chatId) {
-                return {
-                  ...c,
-                  messages: c.messages.map(m => m.id === newMsg.id ? { ...m, status: 'delivered' } : m)
-                };
-              }
-              return c;
-            })
-          );
-        }
-      }).catch(err => console.error("Error sending message via API:", err));
-    }
+
+    const phone = currentActiveChat?.role || '';
+    api.sendMessageApi(phone, messageText).then((res: any) => {
+      if (res && res.success) {
+        setChats(prevChats =>
+          prevChats.map(c => {
+            if (c.id === chatId) {
+              return {
+                ...c,
+                messages: c.messages.map(m => m.id === newMsg.id ? { ...m, status: 'delivered' } : m)
+              };
+            }
+            return c;
+          })
+        );
+      }
+    }).catch(err => console.error("Error sending message via API:", err));
   };
 
   const insets = useSafeAreaInsets();
@@ -299,9 +232,9 @@ export default function ChatroomScreen({
 
           <View style={styles.roomTitleBlock}>
             <Text style={styles.roomHeaderName}>{currentActiveChat.name}</Text>
-            <Text style={styles.roomHeaderStatus}>
+            {/* <Text style={styles.roomHeaderStatus}>
               {isTypingState ? 'typing...' : currentActiveChat.online ? 'Online' : 'Offline'}
-            </Text>
+            </Text> */}
           </View>
 
           {/* Action Buttons */}
