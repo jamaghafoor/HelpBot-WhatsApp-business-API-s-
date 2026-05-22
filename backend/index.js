@@ -41,13 +41,11 @@ app.get('/', (req, res) => {
 
 // Start the server locally if not on Vercel
 const PORT = process.env.PORT || 5001;
-if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`🚀 HelpBot server running on port ${PORT}`);
     console.log(`📡 Webhook URL: http://localhost:${PORT}/api/webhook/incoming`);
     console.log(`📋 API Docs: http://localhost:${PORT}`);
   });
-}
 
 // Export for Vercel Serverless
 export default app;
