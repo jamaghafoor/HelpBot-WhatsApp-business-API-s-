@@ -5,7 +5,6 @@
 
 import React, { useState } from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Chat } from './src/types';
 import SimpleNavigator from './src/navigation/SimpleNavigator';
 
@@ -18,12 +17,12 @@ export default function App() {
   const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
 
   return (
-    <SafeAreaProvider>
+    
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
         <SimpleNavigator chats={chats} setChats={setChats} />
       </View>
-    </SafeAreaProvider>
+    
   );
 }
 

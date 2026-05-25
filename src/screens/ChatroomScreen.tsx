@@ -15,7 +15,6 @@ import {
 import { Chat, Message } from '../types';
 import { BackIcon, Checkmarks } from '../components/Icons';
 import { Navigation } from '../navigation/SimpleNavigator';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api';
 
 const formatMessageTime = (dateString?: string): string => {
@@ -201,14 +200,13 @@ export default function ChatroomScreen({
     }).catch(err => console.error("Error sending message via API:", err));
   };
 
-  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingTop: 40, paddingBottom: 40 }]}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
       >
         {/* Chatroom Header */}
         <View style={styles.roomHeader}>

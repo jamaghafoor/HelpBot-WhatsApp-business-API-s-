@@ -1,1 +1,1 @@
-export const BASE_API_URL = "https://ccc0-59-103-127-190.ngrok-free.app/api/";
+export const BASE_API_URL = "https://helpbot-whatsapp-business-api-s-production.up.railway.app/api/";

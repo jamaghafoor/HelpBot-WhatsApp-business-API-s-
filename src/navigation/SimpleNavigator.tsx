@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { StyleSheet, View, Animated, Dimensions, Keyboard } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Chat } from '../types';
 import ListingScreen from '../screens/ListingScreen';
 import ChatroomScreen from '../screens/ChatroomScreen';
@@ -18,7 +17,6 @@ interface SimpleNavigatorProps {
 }
 
 export default function SimpleNavigator({ chats, setChats }: SimpleNavigatorProps) {
-  const insets = useSafeAreaInsets();
 
   // Navigation states
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -71,7 +69,7 @@ export default function SimpleNavigator({ chats, setChats }: SimpleNavigatorProp
   }, [activeChatId]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingTop: 40, paddingBottom: 40 }]}>
       {/* 1. Base Listing Screen (always loaded for fast stack response) */}
       <ListingScreen chats={chats} setChats={setChats} navigation={navigation} isFocused={!activeChatId} />
 
